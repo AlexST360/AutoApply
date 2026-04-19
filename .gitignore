@@ -1,0 +1,27 @@
+# Credenciales y secretos
+.env
+
+# Base de datos y datos personales
+data/
+
+# Outputs generados
+outputs/
+dashboard/index.html
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Claude
+.claude/
+
+# Windows
+Thumbs.db
+desktop.ini

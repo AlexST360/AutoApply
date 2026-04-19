@@ -1,0 +1,13 @@
+# AutoApply — Dependencias
+# Instalar con: pip install -r requirements.txt
+# Luego: playwright install chromium
+
+# Groq API (via openai client)
+openai>=1.30.0
+
+# Browser automation (Selenium - puro Python, sin DLLs)
+selenium>=4.20.0
+webdriver-manager>=4.0.0
+
+# Variables de entorno
+python-dotenv>=1.0.0
