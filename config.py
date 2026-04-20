@@ -77,7 +77,7 @@ MAX_JOBS_PER_KEYWORD = 15   # máximo de ofertas a scrapear por keyword
 JOBS_PAGE_WAIT = 0.8        # segundos tras click (solo para scraping)
 
 # ─── Scoring ───────────────────────────────────────────────────────────────────
-SCORE_THRESHOLD = 65   # score mínimo para considerar candidata la oferta
+SCORE_THRESHOLD = 70   # score mínimo para considerar candidata la oferta
 
 # ─── Aplicación ────────────────────────────────────────────────────────────────
 MAX_APPLICATIONS_PER_RUN = 10   # tope de postulaciones por ejecución

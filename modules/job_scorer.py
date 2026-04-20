@@ -37,32 +37,79 @@ SYSTEM_PROMPT = """Eres un experto en reclutamiento técnico especializado en te
 Evalúas la compatibilidad entre un candidato y múltiples ofertas de trabajo.
 
 PERFIL DEL CANDIDATO:
-- Nivel: Junior / semi-senior (1 año de experiencia real)
+- Nivel: Junior / semi-senior (1 año de experiencia real en total)
 - Stack: PHP, MySQL, MVC, Python, JavaScript, HTML/CSS
 - Experiencia: plataforma web interna (PHP+MySQL), automatización Python+Selenium
 - Laravel: básico-intermedio
-- Sin experiencia en: React/Angular avanzado, .NET, cloud (AWS/Azure/GCP), DevOps, Salesforce, SAP
-- Español nativo. Inglés: lectura técnica sí, conversación fluida NO
+- SIN experiencia en: React/Angular avanzado, .NET, cloud (AWS/Azure/GCP), DevOps, Salesforce, SAP
+- Español nativo. Inglés: lectura técnica sí, CONVERSACIÓN FLUIDA NO
 
-Criterios de score (0-100):
-- 80-100: Pide PHP/Python/JS, nivel junior/semi, empresa chilena o LATAM
-- 65-79:  Requisitos principales cubiertos, brechas menores
-- 40-64:  Comparte parte del stack, faltan tecnologías clave
-- 0-39:   Stack diferente, senior requerido, ventas/otro rubro, o inglés fluido obligatorio
+CRITERIOS DE SCORE (0-100):
+- 80-100: Pide PHP/Python/JS, nivel junior/semi, empresa chilena
+- 65-79:  Requisitos principales cubiertos, brechas menores aceptables
+- 40-64:  Parte del stack coincide pero faltan tecnologías importantes
+- 0-39:   Descalificador presente (ver abajo)
 
-Penalizaciones:
-- Senior 5+ años requerido: -20 a -30 puntos
-- Inglés conversacional obligatorio: -25 a -35 puntos
+DESCALIFICADORES ABSOLUTOS → score máximo 25:
+Aplica score ≤ 25 si la oferta menciona CUALQUIERA de estos:
+- Requiere 3 o más años de experiencia (ej: "3+ años", "mínimo 3 años", "al menos 4 años")
+- Requiere inglés fluido/conversacional/nativo de forma obligatoria
+- Stack principal es .NET, Java Enterprise, Salesforce, SAP, o similar sin PHP/Python
+- Cargo senior o lead como requisito excluyente
+- Rol completamente diferente (ventas, soporte no técnico, etc.)
 
-Bonus:
-- Pide junior/semi/analista: +10 puntos
-- Empresa en Chile/Santiago: +5 puntos
+PENALIZACIONES (pueden acumularse):
+- "2 años requeridos" cuando dice MÍNIMO excluyente: -25 pts
+- Menciona tecnologías que no domina como OBLIGATORIAS (React, Angular, AWS): -15 pts
+- Inglés mencionado como deseable (no obligatorio): -5 pts
+
+BONUS:
+- Título incluye "junior", "semi-senior", "trainee", "analista": +10 pts
+- Empresa en Chile/Santiago explícito: +5 pts
+- Stack coincide en ≥2 tecnologías clave: +10 pts
 
 RESPONDE ÚNICAMENTE con un JSON array, sin texto adicional:
 [
   {"id": <id>, "score": <0-100>, "justificacion": "<máx 80 palabras en español>"},
   ...
 ]"""
+
+
+# ─── Hard disqualifiers (chequeo local, sin IA) ────────────────────────────────
+_DISQUALIFIERS = [
+    # Experiencia >= 3 años explícita
+    (re.compile(
+        r'(\b[3-9]|\b1\d)\s*\+?\s*años?\s+(?:de\s+)?(?:experiencia|exp\.?)\b'
+        r'|mínimo\s+[3-9]\s*años?\s+(?:de\s+)?(?:experiencia|exp\.?)'
+        r'|al\s+menos\s+[3-9]\s*años?\s+(?:de\s+)?(?:experiencia|exp\.?)'
+        r'|experiencia\s+(?:de\s+)?[3-9]\s*\+?\s*años?'
+        r'|\b[3-9]\+?\s*years?\s+(?:of\s+)?experience',
+        re.I), "requiere 3+ años de experiencia"),
+    # Inglés fluido obligatorio
+    (re.compile(
+        r'inglés?\s+(?:fluido|conversacional|nativo|avanzado)\s*(?:\(obligatorio\)|obligatorio|excluyente|requerido)?'
+        r'|(?:inglés?\s+)?(?:fluent|conversational|native)\s+english\s*(?:required|mandatory)?'
+        r'|dominio\s+(?:del\s+)?inglés?\s+(?:fluido|avanzado|conversacional)',
+        re.I), "inglés fluido requerido"),
+    # Stack totalmente diferente como principal
+    (re.compile(
+        r'\b\.NET\b.*(?:requerido|obligatorio|excluyente|indispensable)'
+        r'|(?:requerido|obligatorio|excluyente|indispensable).*\b\.NET\b',
+        re.I), "stack .NET como excluyente"),
+    (re.compile(
+        r'\bSalesforce\b.*(?:developer|desarrollador|requerido|obligatorio)'
+        r'|(?:developer|desarrollador)\s+Salesforce',
+        re.I), "Salesforce como stack principal"),
+]
+
+
+def _check_disqualifiers(description: str) -> tuple[bool, str]:
+    """Retorna (disqualified, reason). Chequea reglas duras sin IA."""
+    desc = description or ""
+    for pattern, reason in _DISQUALIFIERS:
+        if pattern.search(desc):
+            return True, reason
+    return False, ""
 
 
 def _extract_json_array(raw: str) -> list:
@@ -198,7 +245,15 @@ def run_scoring(rescore: bool = False) -> int:
             except (ValueError, IndexError):
                 score = 0
             justificacion = result.get("justificacion", "Sin justificación.")
-            new_status   = "candidate" if score >= config.SCORE_THRESHOLD else "scored"
+
+            # Hard disqualifier override — prevalece sobre el score de la IA
+            disq, disq_reason = _check_disqualifiers(job.get("description", ""))
+            if disq:
+                score = min(score, 20)
+                justificacion = f"⛔ AUTO-DESC: {disq_reason}. {justificacion}"
+                logger.info("  → [%d] DESCALIFICADOR detectado: %s", job["id"], disq_reason)
+
+            new_status = "candidate" if score >= config.SCORE_THRESHOLD else "scored"
 
             con.execute(
                 "UPDATE jobs SET score=?, score_justification=?, status=? WHERE id=?",
