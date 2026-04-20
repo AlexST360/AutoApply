@@ -71,10 +71,9 @@ def run_search() -> None:
     print("\n▶ MÓDULO 1 — Búsqueda de ofertas")
     count_li = _search()
     print(f"  ✓ LinkedIn: {count_li} nuevas")
-    # CT pausado temporalmente — reactivar cuando se levante el bloqueo de IP
-    # count_ct = _ct_search()
-    # print(f"  ✓ Computrabajo: {count_ct} nuevas")
-    print(f"  ✓ Total: {count_li} ofertas nuevas encontradas.")
+    count_ct = _ct_search()
+    print(f"  ✓ Computrabajo: {count_ct} nuevas")
+    print(f"  ✓ Total: {count_li + count_ct} ofertas nuevas encontradas.")
 
 
 def run_scoring() -> None:

@@ -192,7 +192,11 @@ def run_scoring(rescore: bool = False) -> int:
                 logger.warning("  Sin resultado para id=%d (%s)", job["id"], job["title"][:40])
                 continue
 
-            score        = int(result.get("score", 0))
+            raw_score = result.get("score", 0)
+            try:
+                score = int(str(raw_score).strip().split()[0].rstrip('.,:;'))
+            except (ValueError, IndexError):
+                score = 0
             justificacion = result.get("justificacion", "Sin justificación.")
             new_status   = "candidate" if score >= config.SCORE_THRESHOLD else "scored"
 

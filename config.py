@@ -59,31 +59,16 @@ OPENROUTER_MODEL    = "arcee-ai/trinity-large-preview:free"
 
 # ─── Búsqueda de empleos ───────────────────────────────────────────────────────
 SEARCH_KEYWORDS = [
-    # Amplio — captura todo tipo de cargo de desarrollo
-    "desarrollador",
-    "programador",
     "desarrollador web",
-    "desarrollador software",
-    "desarrollador de aplicaciones",
-
-    # Stack de Alex
     "desarrollador PHP",
-    "desarrollador Laravel",
-    "desarrollador Python",
-    "desarrollador JavaScript",
-    "desarrollador MySQL",
-
-    # Full stack / backend / frontend
     "desarrollador full stack",
-    "desarrollador backend",
-    "desarrollador frontend",
-
-    # Títulos reales del mercado chileno
+    "desarrollador Python",
+    "desarrollador Laravel",
     "analista programador",
     "analista desarrollador",
-    "analista de sistemas",
+    "programador web",
     "ingeniero de software",
-    "soporte y desarrollo",
+    "desarrollador backend",
 ]
 SEARCH_LOCATION = "Chile"
 # GeoId de Chile en LinkedIn (fuerza resultados dentro del país)
