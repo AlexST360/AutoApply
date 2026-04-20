@@ -229,12 +229,20 @@ def run_scoring(rescore: bool = False) -> int:
             logger.error("  Batch %d: respuesta no es lista (%s) — saltando.", b_idx, type(results))
             continue
 
-        # Indexar resultados por id para acceso rápido
+        # Intentar match por id; si el modelo devolvió IDs distintos (1,2,3...) usar posición
         results_by_id = {r["id"]: r for r in results if isinstance(r, dict) and "id" in r}
+        id_match_count = sum(1 for job in batch if job["id"] in results_by_id)
+        use_position = id_match_count == 0 and len(results) == len(batch)
+        if use_position:
+            logger.warning("  Batch %d: IDs no coinciden — usando match por posición (%d resultados).",
+                           b_idx, len(results))
 
         con = sqlite3.connect(config.DB_PATH)
-        for job in batch:
-            result = results_by_id.get(job["id"])
+        for pos, job in enumerate(batch):
+            if use_position:
+                result = results[pos] if pos < len(results) else None
+            else:
+                result = results_by_id.get(job["id"])
             if not result:
                 logger.warning("  Sin resultado para id=%d (%s)", job["id"], job["title"][:40])
                 continue
