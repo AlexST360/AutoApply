@@ -99,10 +99,7 @@ def _build_driver() -> webdriver.Chrome:
     options.add_argument("--window-size=1280,900")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    )
+    # No override de user-agent — usar el real de Chrome para evitar detección
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
@@ -399,10 +396,17 @@ def run_search() -> int:
     driver = _build_driver()
 
     try:
-        _linkedin_login(driver)
+        logged_in = _linkedin_login(driver)
+        if not logged_in:
+            logger.error("Login de LinkedIn fallido — abortando búsqueda.")
+            return 0
 
         for keyword in config.SEARCH_KEYWORDS:
-            jobs = scrape_jobs_for_keyword(driver, keyword)
+            try:
+                jobs = scrape_jobs_for_keyword(driver, keyword)
+            except Exception as exc:
+                logger.warning("  Keyword '%s' falló: %s — saltando.", keyword, exc)
+                continue
             for job in jobs:
                 if save_job(job):
                     total_new += 1
@@ -412,7 +416,10 @@ def run_search() -> int:
             time.sleep(1)   # pausa entre keywords
 
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except Exception:
+            pass
 
     logger.info("Busqueda completada. %d ofertas nuevas guardadas.", total_new)
     return total_new
